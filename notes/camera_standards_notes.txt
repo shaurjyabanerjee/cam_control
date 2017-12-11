@@ -1,0 +1,10 @@
+Notes on Camera Standards
+
+Most consumer-grade cameras and tripods come fitted with a 1/4"-20 UNC thread,
+including most DSLR cameras.
+Larger and heavier cameras, pro-cameras and lens mounts may use a 3/8"-16 UNC thread.
+Both these standard thread sizes are a part of the ANSI standard.
+
+Standard DSLR weights for payload calculations -
+
+Cannon Rebel T6i - 776g - 5.2" x 4.0" x 3.1"  (with batteries and kit lens)
