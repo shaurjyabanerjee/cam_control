@@ -1,0 +1,14 @@
+//Shutter Delays Available for BIC Camera Controller
+
+1.  1/8 second
+2.  1/4 second
+3.  1/2 second
+4.  3/4 second
+5.  1 second
+6.  2 second
+7.  4 second
+8.  6 second
+9.  8 second
+10. 10 second
+11. 15 second
+12. 30 second 
