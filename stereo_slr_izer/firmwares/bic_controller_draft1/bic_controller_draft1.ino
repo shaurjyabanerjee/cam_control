@@ -2,6 +2,8 @@
 //V1.0.0
 //Shaurjya Banerjee - 2017
 
+//Gotta clean up annoying trigger on enter manual jog mode
+
 //LIBRARIES -----------------------------------------------------------------------
 #include <SPI.h>
 #include <Wire.h>
@@ -30,8 +32,8 @@ const int pulse_delay = 50; //In microseconds
 
 //CAMERA CONTROL PINS -------------------------------------------------------------
 const byte focus_pin   = 12;
-const byte shutter_pin = 13;
-const byte status_pin  = 7; 
+const byte shutter_pin = 7;
+const byte status_pin  = 8; 
 
 //CONTROLLER PINS -----------------------------------------------------------------
 const byte button1_pin = 2;
@@ -61,8 +63,12 @@ byte is_busy = 0;
 byte print_state = 0;
 byte shutter_speed_state = 0;
 
+int shutter_speeds[] = 
+{125, 250, 500, 750, 1000, 2000, 4000, 6000, 8000, 10000, 15000, 30000};
+
 //MISC VARIABLES ------------------------------------------------------------------
-int button_delay = 60;
+const byte button_delay = 60;
+const int shutter_delay = 1000;
   
 #if (SSD1306_LCDHEIGHT != 64)
 #error(F("Height incorrect, please fix Adafruit_SSD1306.h!"));
@@ -393,8 +399,8 @@ void gfx_handler()
       display.println(F("MANUAL JOG"));
       display.display();
       print_state = 1;
+      delay(200);
     }
-    
     manual_jog();
   }
   
@@ -561,6 +567,11 @@ void manual_jog()
     drive_step(0);
     delay(0.4);
   }
+
+  if (button3_state == HIGH && print_state == HIGH) 
+    {
+      take_shot(shutter_delay);
+    }
 }
 
 //Function to display potentiometer values with bar graph
@@ -677,7 +688,6 @@ void take_shot(int sh_delay)
   digitalWrite(shutter_pin, LOW);
   delay(sh_delay);
   digitalWrite(shutter_pin, HIGH);
-  delay(sh_delay);
 }
 
 //Function to focus camera
@@ -686,5 +696,4 @@ void focus_shot(int f_delay)
   digitalWrite(focus_pin, LOW);
   delay(f_delay);
   digitalWrite(focus_pin, HIGH);
-  delay(f_delay);
 }
