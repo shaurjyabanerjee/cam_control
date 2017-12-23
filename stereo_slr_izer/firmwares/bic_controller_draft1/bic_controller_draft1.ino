@@ -30,10 +30,14 @@ float test_delay = 0.4;
 long int test_steps = 24000;
 const int pulse_delay = 50; //In microseconds
 
+//LINEAR DISTANCE VARIABLES -------------------------------------------------------
+const int steps_per_inch = 1266;  //Number of steps to move one inch linearly
+const float inter_focals [] =
+{0.5, 1, 2, 2.5, 3, 4, 6, 8, 10, 12, 15, 18};
+
 //CAMERA CONTROL PINS -------------------------------------------------------------
-const byte focus_pin   = 12;
+const byte focus_pin   = 8;
 const byte shutter_pin = 7;
-const byte status_pin  = 8; 
 
 //CONTROLLER PINS -----------------------------------------------------------------
 const byte button1_pin = 2;
@@ -62,8 +66,10 @@ byte enter_state = 0;
 byte is_busy = 0;
 byte print_state = 0;
 byte shutter_speed_state = 0;
+byte inter_focal_state = 0;
+int temp_step_counter = 0;
 
-int shutter_speeds[] = 
+const int shutter_speeds[] = 
 {125, 250, 500, 750, 1000, 2000, 4000, 6000, 8000, 10000, 15000, 30000};
 
 //MISC VARIABLES ------------------------------------------------------------------
@@ -271,7 +277,6 @@ void panning_intervalometer()
 void take_stereo_photo(int dist, int sh_delay, int f_delay, int settle_time)
 {
   is_busy = HIGH;
-  digitalWrite(status_pin, HIGH);
 
   //Focus and take first shot
   focus_shot(f_delay);
@@ -293,9 +298,7 @@ void take_stereo_photo(int dist, int sh_delay, int f_delay, int settle_time)
   //Return to origin
   move_steps(dist, 0, test_delay);
 
-  is_busy = LOW;
-  digitalWrite(status_pin, LOW);
-  
+  is_busy = LOW; 
 }
 
 void video_slider()
@@ -520,7 +523,8 @@ void display_menu()
 //Function to handle GFX for Stereo Photography Submenu
 void stereo_photo_gfx()
 {
-  shutter_speed_state = map(pot2_val, 0, 1023, 0, 11);
+  inter_focal_state = map(pot1_val, 0, 900, 0, 10);
+  shutter_speed_state = map(pot2_val, 0, 900, 0, 10);
   
   display.setCursor(0,0);
   display.setTextColor(WHITE);
@@ -530,22 +534,11 @@ void stereo_photo_gfx()
   //Write Submenu Items
   display.setTextSize(1);
   display.println(F(" "));
-  display.println(F("IO  DIST    "));
+  display.print(F("IO  DIST    "));
+  inter_focal_state_handler();
   display.println(F(" "));
   display.print(F("SHTR DLY    "));
-  if (shutter_speed_state == 0) {display.println(F("1/8 sec"));}
-  else if (shutter_speed_state == 1) {display.println(F("1/4 sec"));}
-  else if (shutter_speed_state == 2) {display.println(F("1/2 sec"));}
-  else if (shutter_speed_state == 3) {display.println(F("3/4 sec"));}
-  else if (shutter_speed_state == 4) {display.println(F("1 sec"));}
-  else if (shutter_speed_state == 5) {display.println(F("2 sec"));}
-  else if (shutter_speed_state == 6) {display.println(F("4 sec"));}
-  else if (shutter_speed_state == 7) {display.println(F("6 sec"));}
-  else if (shutter_speed_state == 8) {display.println(F("8 sec"));}
-  else if (shutter_speed_state == 9) {display.println(F("10 sec"));}
-  else if (shutter_speed_state == 10) {display.println(F("15 sec"));}
-  else if (shutter_speed_state == 11) {display.println(F("30 sec"));}
-  
+  shutter_speed_state_handler();
   display.println(F(" "));
   display.println(F("COOLDOWN    "));
   display.println(F(" "));
@@ -554,24 +547,69 @@ void stereo_photo_gfx()
   
 }
 
+//Function to wrap the selection of shutter speeds
+void shutter_speed_state_handler()
+{
+  if (shutter_speed_state == 0)       {display.println(F("1/8 sec"));}
+  else if (shutter_speed_state == 1)  {display.println(F("1/4 sec"));}
+  else if (shutter_speed_state == 2)  {display.println(F("1/2 sec"));}
+  else if (shutter_speed_state == 3)  {display.println(F("3/4 sec"));}
+  else if (shutter_speed_state == 4)  {display.println(F("1 sec"));}
+  else if (shutter_speed_state == 5)  {display.println(F("2 sec"));}
+  else if (shutter_speed_state == 6)  {display.println(F("4 sec"));}
+  else if (shutter_speed_state == 7)  {display.println(F("6 sec"));}
+  else if (shutter_speed_state == 8)  {display.println(F("8 sec"));}
+  else if (shutter_speed_state == 9)  {display.println(F("10 sec"));}
+  else if (shutter_speed_state == 10) {display.println(F("15 sec"));}
+  else if (shutter_speed_state == 11) {display.println(F("30 sec"));}
+}
+
+//Fucntion to wrap the selection of interfocal distances
+void inter_focal_state_handler()
+{
+  if (inter_focal_state == 0)       {display.println(F("0.5 inch"));}
+  else if (inter_focal_state == 1)  {display.println(F("1 inch"));}
+  else if (inter_focal_state == 2)  {display.println(F("2 inch"));}
+  else if (inter_focal_state == 3)  {display.println(F("2.5 inch "));}
+  else if (inter_focal_state == 4)  {display.println(F("3 inch"));}
+  else if (inter_focal_state == 5)  {display.println(F("4 inch"));}
+  else if (inter_focal_state == 6)  {display.println(F("6 inch"));}
+  else if (inter_focal_state == 7)  {display.println(F("8 inch"));}
+  else if (inter_focal_state == 8)  {display.println(F("10 inch"));}
+  else if (inter_focal_state == 9)  {display.println(F("12 inch"));}
+  else if (inter_focal_state == 10) {display.println(F("15 inch"));}
+  else if (inter_focal_state == 11) {display.println(F("18 inch"));}
+}
+
+
 //Function to enable manual control of slider using buttons
 void manual_jog()
 {
   if (button1_state == HIGH && button2_state == LOW)
   {
     drive_step(1);
-    delay(0.4);
+    //delayMicroseconds(5);
+    //temp_step_counter++;
   }
   else if (button2_state == HIGH && button1_state == LOW)
   {
     drive_step(0);
-    delay(0.4);
+    //delayMicroseconds(5);
+    //temp_step_counter--;
   }
 
   if (button3_state == HIGH && print_state == HIGH) 
     {
       take_shot(shutter_delay);
     }
+
+  //display.clearDisplay();
+  //display.setCursor(0,0);
+  //display.setTextColor(WHITE);
+  //display.setTextSize(2);
+  //display.println(" ");
+  //display.println(temp_step_counter);
+  //display.display();
 }
 
 //Function to display potentiometer values with bar graph

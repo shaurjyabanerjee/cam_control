@@ -12,3 +12,30 @@
 10. 10 second
 11. 15 second
 12. 30 second 
+
+//TB6600 Microstep settings 
+
+2/A Microstep
+200 pulses/rev
+
+DIP - ON - OFF - ON
+
+//Step to linear distance measurements
+
+633 steps = half inch travel (observed)
+1266 steps = one inch travel (observed)
+
+//InterFocal Distances Available for BIC Camera Controller
+
+1.  0.5 in ()
+2.  1   in ()
+3.  2   in ()
+4.  2.5 in ()
+5.  3   in ()
+6.  4   in ()
+7.  6   in ()
+8.  8   in ()
+9.  10  in ()
+10. 12  in ()
+11. 15  in ()
+12. 18  in ()
