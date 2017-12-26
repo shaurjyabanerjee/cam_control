@@ -32,7 +32,7 @@ const int pulse_delay = 50; //In microseconds
 
 //LINEAR DISTANCE VARIABLES -------------------------------------------------------
 const int steps_per_inch = 1266;  //Number of steps to move one inch linearly
-const float inter_focals [] =
+const float inter_focals [] =     //Selection of inter focal distances in inches
 {0.5, 1, 2, 2.5, 3, 4, 6, 8, 10, 12, 15, 18};
 
 //CAMERA CONTROL PINS -------------------------------------------------------------
@@ -68,6 +68,7 @@ byte print_state = 0;
 byte shutter_speed_state = 0;
 byte inter_focal_state = 0;
 int temp_step_counter = 0;
+int interfocal_steps = 0;
 
 const int shutter_speeds[] = 
 {125, 250, 500, 750, 1000, 2000, 4000, 6000, 8000, 10000, 15000, 30000};
@@ -250,6 +251,7 @@ void setup()
 
    beaver_flashscreen(5, 100);
    beaver_splashscreen();
+   //print_busy();
 }
 
 void loop()
@@ -274,31 +276,32 @@ void panning_intervalometer()
 }
 
 //Function to run stereo photography routine
-void take_stereo_photo(int dist, int sh_delay, int f_delay, int settle_time)
+void take_stereo_photo(int dist, int sh_delay, int cooldown, int spd)
 {
   is_busy = HIGH;
+  print_busy();
+  delay(500);
 
-  //Focus and take first shot
-  focus_shot(f_delay);
+  //Take first shot
   take_shot(sh_delay);
 
   //Allow time to settle
-  delay(settle_time);
+  delay(cooldown);
 
   //Move required distance
-  move_steps(dist, 1, test_delay);
+  move_steps(dist, 1, spd);
 
-  //Focus and take second shot
-  focus_shot(f_delay);
+  //Take second shot
   take_shot(sh_delay);
 
   //Allow time to settle
-  delay(settle_time);
+  delay(cooldown);
 
   //Return to origin
-  move_steps(dist, 0, test_delay);
+  move_steps(dist, 0, spd);
 
-  is_busy = LOW; 
+  is_busy = LOW;
+  display.clearDisplay(); 
 }
 
 void video_slider()
@@ -472,6 +475,20 @@ void beaver_splashscreen()
   display.clearDisplay();
 }
 
+//Function to print the "BUSY" screen
+void print_busy()
+{
+  display.clearDisplay();
+  //Center the cursor
+  display.setCursor(31,22);
+  display.setTextColor(WHITE);
+  display.setTextSize(3);
+  display.println(F("BUSY"));
+  display.display();
+}
+
+
+
 //Function to display main mode menu
 void display_menu()
 {
@@ -523,8 +540,9 @@ void display_menu()
 //Function to handle GFX for Stereo Photography Submenu
 void stereo_photo_gfx()
 {
-  inter_focal_state = map(pot1_val, 0, 900, 0, 10);
+  inter_focal_state =   map(pot1_val, 0, 900, 0, 10);
   shutter_speed_state = map(pot2_val, 0, 900, 0, 10);
+  interfocal_steps = inter_focals[inter_focal_state] * steps_per_inch;
   
   display.setCursor(0,0);
   display.setTextColor(WHITE);
@@ -534,20 +552,25 @@ void stereo_photo_gfx()
   //Write Submenu Items
   display.setTextSize(1);
   display.println(F(" "));
-  display.print(F("IO  DIST    "));
+  display.print(F("IF  DIST    "));
   inter_focal_state_handler();
   display.println(F(" "));
   display.print(F("SHTR DLY    "));
   shutter_speed_state_handler();
   display.println(F(" "));
-  display.println(F("COOLDOWN    "));
-  display.println(F(" "));
-  
+  //display.print(F("COOLDOWN    "));
+  display.println(interfocal_steps);
   display.display();
+  
+
+  if (button1_state == HIGH)
+  {
+    take_stereo_photo(interfocal_steps, 1000, 1000, 350);
+  }
   
 }
 
-//Function to wrap the selection of shutter speeds
+//Function to wrap the selection and display of shutter speeds
 void shutter_speed_state_handler()
 {
   if (shutter_speed_state == 0)       {display.println(F("1/8 sec"));}
@@ -564,7 +587,7 @@ void shutter_speed_state_handler()
   else if (shutter_speed_state == 11) {display.println(F("30 sec"));}
 }
 
-//Fucntion to wrap the selection of interfocal distances
+//Fucntion to wrap the selection and display of interfocal distances
 void inter_focal_state_handler()
 {
   if (inter_focal_state == 0)       {display.println(F("0.5 inch"));}
@@ -588,13 +611,11 @@ void manual_jog()
   if (button1_state == HIGH && button2_state == LOW)
   {
     drive_step(1);
-    //delayMicroseconds(5);
     //temp_step_counter++;
   }
   else if (button2_state == HIGH && button1_state == LOW)
   {
     drive_step(0);
-    //delayMicroseconds(5);
     //temp_step_counter--;
   }
 
@@ -689,7 +710,6 @@ void drive_step(int dir)
   if (dir == 0)
   {
     digitalWrite(dir_pin, LOW);
-    digitalWrite(ena_pin, HIGH);
     digitalWrite(pul_pin, HIGH);
     delayMicroseconds(pulse_delay);
     digitalWrite(pul_pin, LOW);
@@ -699,7 +719,6 @@ void drive_step(int dir)
   else if (dir == 1)
   {
     digitalWrite(dir_pin, HIGH);
-    digitalWrite(ena_pin, HIGH);
     digitalWrite(pul_pin, HIGH);
     delayMicroseconds(pulse_delay);
     digitalWrite(pul_pin, LOW);
@@ -709,12 +728,15 @@ void drive_step(int dir)
 
 //Function to move a given number of steps 
 //linearly in either direction
-void move_steps(int num_steps, int dir, float s_delay)
+void move_steps(int num_steps, int direct, int dly)
 {
   for (int i = 0; i < num_steps; i++)
   {
-    drive_step(dir);
-    delay(s_delay);
+    drive_step(direct);
+    delayMicroseconds(dly);
+    //I've found a good range for this delay is in the 
+    //350 to 1000 microsecond range for NEMA-23
+    //stepper motor that comes with the Open Builds C-Beam
   }
 }
 

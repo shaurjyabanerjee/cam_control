@@ -27,15 +27,17 @@ DIP - ON - OFF - ON
 
 //InterFocal Distances Available for BIC Camera Controller
 
-1.  0.5 in ()
-2.  1   in ()
-3.  2   in ()
-4.  2.5 in ()
-5.  3   in ()
-6.  4   in ()
-7.  6   in ()
-8.  8   in ()
-9.  10  in ()
-10. 12  in ()
-11. 15  in ()
-12. 18  in ()
+1.  0.5 inch
+2.  1   inch
+3.  2   inch
+4.  2.5 inch
+5.  3   inch
+6.  4   inch
+7.  6   inch
+8.  8   inch
+9.  10  inch
+10. 12  inch
+11. 15  inch
+12. 18  inch
+
+//move steps = 
