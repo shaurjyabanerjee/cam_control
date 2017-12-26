@@ -23,7 +23,6 @@ Adafruit_SSD1306 display(OLED_RESET);
 //MOTOR CONTROL PINS --------------------------------------------------------------
 const byte pul_pin     = 9;
 const byte dir_pin     = 10;
-const byte ena_pin     = 11;
 
 //MOTOR CONTROL VARIABLES ---------------------------------------------------------
 float test_delay = 0.4;
@@ -33,7 +32,8 @@ const int pulse_delay = 50; //In microseconds
 //LINEAR DISTANCE VARIABLES -------------------------------------------------------
 const int steps_per_inch = 1266;  //Number of steps to move one inch linearly
 const float inter_focals [] =     //Selection of inter focal distances in inches
-{0.5, 1, 2, 2.5, 3, 4, 6, 8, 10, 12, 15, 18};
+{0.5, 1, 2, 2.5, 2.8, 3, 4, 6, 8, 10, 12, 15};
+const int max_steps = 18990;      //Maximum travel for 500mm  OpenBuilds C-Beam
 
 //CAMERA CONTROL PINS -------------------------------------------------------------
 const byte focus_pin   = 8;
@@ -61,18 +61,21 @@ int pot2_val = 0;
 int pot3_val = 0;
 int pot4_val = 0;
 
-byte menu_state = 0;
+byte menu_state  = 0;
 byte enter_state = 0;
-byte is_busy = 0;
+byte is_busy     = 0;
 byte print_state = 0;
 byte shutter_speed_state = 0;
-byte inter_focal_state = 0;
-int temp_step_counter = 0;
-int interfocal_steps = 0;
-int step_delay_state = 0;
+byte inter_focal_state   = 0;
+int temp_step_counter    = 0;
+int interfocal_steps     = 0;
+int cooldown_state       = 0;
+int step_delay_state     = 0;
 
 const int shutter_speeds[] = 
 {125, 250, 500, 750, 1000, 2000, 4000, 6000, 8000, 10000, 15000, 30000};
+
+const int cooldowns[] = {0, 500, 1000, 2000};
 
 //MISC VARIABLES ------------------------------------------------------------------
 const byte button_delay = 60;
@@ -237,7 +240,6 @@ void setup()
    pinMode(shutter_pin, OUTPUT);
    pinMode(pul_pin, OUTPUT);
    pinMode(dir_pin, OUTPUT);
-   pinMode(ena_pin, OUTPUT);
 
    //Set default states of digital outs
    digitalWrite(focus_pin, HIGH);
@@ -286,18 +288,15 @@ void take_stereo_photo(int dist, int sh_delay, int cooldown, int spd)
   //Take first shot
   take_shot(sh_delay);
 
-  //Allow time to settle
-  delay(cooldown);
-
   //Move required distance
   move_steps(dist, 1, spd);
 
-  //Take second shot
-  take_shot(sh_delay);
-
   //Allow time to settle
   delay(cooldown);
-
+  
+  //Take second shot
+  take_shot(sh_delay);
+  
   //Return to origin
   move_steps(dist, 0, spd);
 
@@ -539,10 +538,11 @@ void display_menu()
 //Function to handle GFX for Stereo Photography Submenu
 void stereo_photo_gfx()
 {
-  inter_focal_state =   map(pot1_val, 0, 900, 0, 10);
+  inter_focal_state   = map(pot1_val, 0, 900, 0, 10);
   shutter_speed_state = map(pot2_val, 0, 900, 0, 10);
-  step_delay_state = map(pot4_val, 0, 1024, 1100, 370);
-  interfocal_steps = inter_focals[inter_focal_state] * steps_per_inch;
+  cooldown_state      = map(pot3_val, 0, 800, 0, 3);
+  step_delay_state    = map(pot4_val, 0, 1024, 1100, 370);
+  interfocal_steps    = inter_focals[inter_focal_state] * steps_per_inch;
   
   display.setCursor(0,0);
   display.setTextColor(WHITE);
@@ -552,20 +552,24 @@ void stereo_photo_gfx()
   //Write Submenu Items
   display.setTextSize(1);
   display.println(F(" "));
+  visualize_interfocal_travel();
+  display.println(F(" "));
   display.print(F("IF  DIST    "));
   inter_focal_state_handler();
-  display.println(F(" "));
   display.print(F("SHTR DLY    "));
   shutter_speed_state_handler();
-  display.println(F("COOLDOWN    "));
+  display.print(F("STL TIME    "));
+  cooldown_state_handler();
   display.print(F("MO SPEED    "));
   step_delay_state_handler();
+  display.drawFastVLine(60, 33, 40, WHITE);
   display.display();
   
 
   if (button1_state == HIGH)
   {
-    take_stereo_photo(interfocal_steps, shutter_speeds[shutter_speed_state], 1000, step_delay_state);
+    take_stereo_photo(interfocal_steps, shutter_speeds[shutter_speed_state], 
+    cooldowns[cooldown_state], step_delay_state);
   }
   
 }
@@ -594,14 +598,23 @@ void inter_focal_state_handler()
   else if (inter_focal_state == 1)  {display.println(F("1 inch"));}
   else if (inter_focal_state == 2)  {display.println(F("2 inch"));}
   else if (inter_focal_state == 3)  {display.println(F("2.5 inch "));}
-  else if (inter_focal_state == 4)  {display.println(F("3 inch"));}
-  else if (inter_focal_state == 5)  {display.println(F("4 inch"));}
-  else if (inter_focal_state == 6)  {display.println(F("6 inch"));}
-  else if (inter_focal_state == 7)  {display.println(F("8 inch"));}
-  else if (inter_focal_state == 8)  {display.println(F("10 inch"));}
-  else if (inter_focal_state == 9)  {display.println(F("12 inch"));}
-  else if (inter_focal_state == 10) {display.println(F("15 inch"));}
-  else if (inter_focal_state == 11) {display.println(F("18 inch"));}
+  else if (inter_focal_state == 4)  {display.println(F("2.8 inch"));}
+  else if (inter_focal_state == 5)  {display.println(F("3 inch"));}
+  else if (inter_focal_state == 6)  {display.println(F("4 inch"));}
+  else if (inter_focal_state == 7)  {display.println(F("6 inch"));}
+  else if (inter_focal_state == 8)  {display.println(F("8 inch"));}
+  else if (inter_focal_state == 9)  {display.println(F("10 inch"));}
+  else if (inter_focal_state == 10) {display.println(F("12 inch"));}
+  else if (inter_focal_state == 11) {display.println(F("15 inch"));}
+}
+
+//Function to wrap the display and selection of cooldown times
+void cooldown_state_handler()
+{
+  if (cooldown_state == 0) {display.println(F("0 sec"));}
+  else if (cooldown_state == 1) {display.println(F("0.5 sec"));}
+  else if (cooldown_state == 2) {display.println(F("1 sec"));}
+  else if (cooldown_state == 3) {display.println(F("2 sec"));}
 }
 
 //Function to wrap the selection and display of movement speeds
@@ -612,6 +625,13 @@ void step_delay_state_handler()
   else if (step_delay_state <= 500) {display.println(F("FAST!"));}
 }
 
+//Fucntion to wrap the display of a bar graph to visualize InterFocal travel
+void visualize_interfocal_travel()
+{
+  byte temp = map(interfocal_steps, 0, max_steps, 0, 126);
+  display.fillRect(0, 19, temp, 8, WHITE);
+  
+}
 
 //Function to enable manual control of slider using buttons
 void manual_jog()
