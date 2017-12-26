@@ -69,6 +69,7 @@ byte shutter_speed_state = 0;
 byte inter_focal_state = 0;
 int temp_step_counter = 0;
 int interfocal_steps = 0;
+int step_delay_state = 0;
 
 const int shutter_speeds[] = 
 {125, 250, 500, 750, 1000, 2000, 4000, 6000, 8000, 10000, 15000, 30000};
@@ -487,8 +488,6 @@ void print_busy()
   display.display();
 }
 
-
-
 //Function to display main mode menu
 void display_menu()
 {
@@ -542,6 +541,7 @@ void stereo_photo_gfx()
 {
   inter_focal_state =   map(pot1_val, 0, 900, 0, 10);
   shutter_speed_state = map(pot2_val, 0, 900, 0, 10);
+  step_delay_state = map(pot4_val, 0, 1024, 1100, 370);
   interfocal_steps = inter_focals[inter_focal_state] * steps_per_inch;
   
   display.setCursor(0,0);
@@ -557,15 +557,15 @@ void stereo_photo_gfx()
   display.println(F(" "));
   display.print(F("SHTR DLY    "));
   shutter_speed_state_handler();
-  display.println(F(" "));
-  //display.print(F("COOLDOWN    "));
-  display.println(interfocal_steps);
+  display.println(F("COOLDOWN    "));
+  display.print(F("MO SPEED    "));
+  step_delay_state_handler();
   display.display();
   
 
   if (button1_state == HIGH)
   {
-    take_stereo_photo(interfocal_steps, 1000, 1000, 350);
+    take_stereo_photo(interfocal_steps, shutter_speeds[shutter_speed_state], 1000, step_delay_state);
   }
   
 }
@@ -602,6 +602,14 @@ void inter_focal_state_handler()
   else if (inter_focal_state == 9)  {display.println(F("12 inch"));}
   else if (inter_focal_state == 10) {display.println(F("15 inch"));}
   else if (inter_focal_state == 11) {display.println(F("18 inch"));}
+}
+
+//Function to wrap the selection and display of movement speeds
+void step_delay_state_handler()
+{
+  if (step_delay_state >= 700) {display.println(F("SLOW"));}
+  else if (step_delay_state < 700 && step_delay_state > 500) {display.println(F("MEDIUM"));}
+  else if (step_delay_state <= 500) {display.println(F("FAST!"));}
 }
 
 
