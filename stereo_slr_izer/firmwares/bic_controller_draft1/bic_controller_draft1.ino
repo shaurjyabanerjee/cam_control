@@ -75,7 +75,7 @@ int step_delay_state     = 0;
 const int shutter_speeds[] = 
 {125, 250, 500, 750, 1000, 2000, 4000, 6000, 8000, 10000, 15000, 30000};
 
-const int cooldowns[] = {0, 500, 1000, 2000};
+const int cooldowns[] = {0, 1000, 2000, 4000};
 
 //MISC VARIABLES ------------------------------------------------------------------
 const byte button_delay = 60;
@@ -286,17 +286,15 @@ void take_stereo_photo(int dist, int sh_delay, int cooldown, int spd)
   delay(500);
 
   //Take first shot
-  take_shot(sh_delay);
-
+  take_shot(shutter_delay);
+  delay(sh_delay);
   //Move required distance
   move_steps(dist, 1, spd);
-
   //Allow time to settle
   delay(cooldown);
-  
   //Take second shot
-  take_shot(sh_delay);
-  
+  take_shot(shutter_delay);
+  delay(sh_delay);
   //Return to origin
   move_steps(dist, 0, spd);
 
@@ -611,10 +609,10 @@ void inter_focal_state_handler()
 //Function to wrap the display and selection of cooldown times
 void cooldown_state_handler()
 {
-  if (cooldown_state == 0) {display.println(F("0 sec"));}
-  else if (cooldown_state == 1) {display.println(F("0.5 sec"));}
-  else if (cooldown_state == 2) {display.println(F("1 sec"));}
-  else if (cooldown_state == 3) {display.println(F("2 sec"));}
+  if (cooldown_state == 0)      {display.println(F("0 sec"));}
+  else if (cooldown_state == 1) {display.println(F("1 sec"));}
+  else if (cooldown_state == 2) {display.println(F("2 sec"));}
+  else if (cooldown_state == 3) {display.println(F("4 sec"));}
 }
 
 //Function to wrap the selection and display of movement speeds
@@ -756,15 +754,34 @@ void drive_step(int dir)
 
 //Function to move a given number of steps 
 //linearly in either direction
+//Good value for dly is 350 to 1000
 void move_steps(int num_steps, int direct, int dly)
 {
+  const int ease_steps = 500;
+  int temp_counter = ease_steps;
+  
   for (int i = 0; i < num_steps; i++)
   {
-    drive_step(direct);
-    delayMicroseconds(dly);
-    //I've found a good range for this delay is in the 
-    //350 to 1000 microsecond range for NEMA-23
-    //stepper motor that comes with the Open Builds C-Beam
+    //First lets deal with the ease in
+    if (i <= ease_steps)
+    {
+      drive_step(direct);
+      temp_counter--;
+      delayMicroseconds(dly+temp_counter);
+    }
+    //Drive linearly
+    else if ( i > ease_steps && i < (num_steps-ease_steps) )
+    {
+      drive_step(direct);
+      delayMicroseconds(dly);
+    }
+    //Now its time for the Ease out
+    else if (i > (num_steps-ease_steps) )
+    {
+      drive_step(direct);
+      temp_counter++;
+      delayMicroseconds(dly+temp_counter);
+    }
   }
 }
 
