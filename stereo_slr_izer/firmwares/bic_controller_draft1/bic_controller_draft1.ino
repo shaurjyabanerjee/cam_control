@@ -2,7 +2,9 @@
 //V1.0.0
 //Shaurjya Banerjee - 2017
 
-//Gotta clean up annoying trigger on enter manual jog mode
+//Written to use SSD1306 128x64 monochrome OLED display from Adafruit with I2C
+//Motion control written to use TB6600 Microstep Driver with a 1.8˚/step stepper
+//TB6600 set to 2A Microstepping (400 steps/revolution)
 
 //LIBRARIES -----------------------------------------------------------------------
 #include <SPI.h>
@@ -71,6 +73,11 @@ int temp_step_counter    = 0;
 int interfocal_steps     = 0;
 int cooldown_state       = 0;
 int step_delay_state     = 0;
+int numb_shots           = 0;
+int interval_state       = 0;
+
+const int intervals[] =
+{3, 5, 7, 10, 12, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 90, 120};
 
 const int shutter_speeds[] = 
 {125, 250, 500, 750, 1000, 2000, 4000, 6000, 8000, 10000, 15000, 30000};
@@ -79,7 +86,7 @@ const int cooldowns[] = {0, 1000, 2000, 4000};
 
 //MISC VARIABLES ------------------------------------------------------------------
 const byte button_delay = 60;
-const int shutter_delay = 1000;
+const int global_shutter_delay = 1000;
   
 #if (SSD1306_LCDHEIGHT != 64)
 #error(F("Height incorrect, please fix Adafruit_SSD1306.h!"));
@@ -87,7 +94,7 @@ const int shutter_delay = 1000;
 
 //BITMAPS -------------------------------------------------------------------------
 
-//Black on White Beaver Logo
+//Beaver Imaging Co. Logo Image 1
 #define SBVR_HEIGHT 128
 #define SBVR_GLCD_WIDTH  64 
 static const unsigned char PROGMEM sbvr [] = {
@@ -157,7 +164,7 @@ static const unsigned char PROGMEM sbvr [] = {
 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
 };
 
-//White on black Beaver Logo
+//Beaver Imaging Co. Logo Image 2
 #define BBVR_HEIGHT 128
 #define BBVR_GLCD_WIDTH  64
 static const unsigned char PROGMEM bbvr [] = {
@@ -267,7 +274,7 @@ void loop()
 //CAMERA CONTROL FUNCTIONS --------------------------------------------------------
 
 //Function to run simple intervalometer routine
-void intervalometer(int num_shots, int interval, int shutter_delay, int total_time)
+void intervalometer(int num_shots, int interval, int shutter_delay)
 {
   
 }
@@ -286,14 +293,14 @@ void take_stereo_photo(int dist, int sh_delay, int cooldown, int spd)
   delay(500);
 
   //Take first shot
-  take_shot(shutter_delay);
+  take_shot(global_shutter_delay);
   delay(sh_delay);
   //Move required distance
   move_steps(dist, 1, spd);
   //Allow time to settle
   delay(cooldown);
   //Take second shot
-  take_shot(shutter_delay);
+  take_shot(global_shutter_delay);
   delay(sh_delay);
   //Return to origin
   move_steps(dist, 0, spd);
@@ -322,7 +329,6 @@ void control_poller()
   pot4_val = analogRead(pot4_pin);
 }
 
-//TODO - Make this aware of the size of the menu items array!
 void control_interpreter()
 {
   //BUTTON 1 - INCREMENTS MENU STATE
@@ -369,6 +375,7 @@ void gfx_handler()
   if (enter_state != 0 && menu_state == 2)
   {
     display.clearDisplay();
+    time_lapse_gfx();
   }
 
   //MENU3 - QUADRANT VIEW
@@ -563,7 +570,7 @@ void stereo_photo_gfx()
   display.drawFastVLine(60, 33, 40, WHITE);
   display.display();
   
-
+  //Trigger stereo shot
   if (button1_state == HIGH)
   {
     take_stereo_photo(interfocal_steps, shutter_speeds[shutter_speed_state], 
@@ -628,6 +635,57 @@ void visualize_interfocal_travel()
 {
   byte temp = map(interfocal_steps, 0, max_steps, 0, 126);
   display.fillRect(0, 19, temp, 8, WHITE);
+}
+
+//Function to handle GFX for time lapse submenu
+void time_lapse_gfx()
+{
+  numb_shots     = map(pot1_val, 0, 1023, 10, 2000);
+  interval_state = map(pot2_val, 0, 1000, 0, 19);
+  
+  display.setCursor(0,0);
+  display.setTextColor(WHITE);
+  display.setTextSize(2);
+  display.println(F("TIME LAPSE"));
+
+  //Write Submenu Items
+  display.setTextSize(1);
+  display.println();
+  display.print(F("NUM SHOTS   "));
+  display.print(numb_shots);
+  display.println();
+  display.print(F("INTERVAL    "));
+  interval_state_handler();
+  display.print(F("TOTAL TIME  "));
+  display.display();
+}
+
+//Function to wrap the selection and display of intervals
+void interval_state_handler()
+{
+  if (interval_state < 14) 
+  {
+    display.print(intervals[interval_state]);
+    display.println(F(" sec"));
+  }
+  else if (interval_state == 14) {display.println(F("1 min"));}
+  else if (interval_state == 15) {display.println(F("1.5 min"));}
+  else if (interval_state == 16) {display.println(F("2 min"));}
+  else if (interval_state == 17) {display.println(F("2.5 min"));}
+  else if (interval_state == 18) {display.println(F("3 min"));}
+  else if (interval_state == 19) {display.println(F("4 min"));}
+}
+
+//Function to wrap the calculation and display of estimated total time 
+void total_time_handler()
+{
+
+  
+}
+
+//Fucntion to handle GFX for panning time lapse menu
+void panning_time_lapse_gfx()
+{
   
 }
 
@@ -647,7 +705,7 @@ void manual_jog()
 
   if (button3_state == HIGH && print_state == HIGH) 
     {
-      take_shot(shutter_delay);
+      take_shot(global_shutter_delay);
     }
 
   //display.clearDisplay();
