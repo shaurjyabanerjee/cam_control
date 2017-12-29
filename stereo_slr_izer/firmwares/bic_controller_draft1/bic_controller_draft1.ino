@@ -640,8 +640,9 @@ void visualize_interfocal_travel()
 //Function to handle GFX for time lapse submenu
 void time_lapse_gfx()
 {
-  numb_shots     = map(pot1_val, 0, 1023, 10, 2000);
+  numb_shots     = map(pot1_val, 0, 1010, 1, 80);
   interval_state = map(pot2_val, 0, 1000, 0, 19);
+  numb_shots = numb_shots * 25; 
   
   display.setCursor(0,0);
   display.setTextColor(WHITE);
@@ -654,9 +655,13 @@ void time_lapse_gfx()
   display.print(F("NUM SHOTS   "));
   display.print(numb_shots);
   display.println();
+  display.println();
   display.print(F("INTERVAL    "));
   interval_state_handler();
+  display.println();
   display.print(F("TOTAL TIME  "));
+  total_time_handler();
+  display.drawFastVLine(65, 23, 50, WHITE);
   display.display();
 }
 
@@ -679,8 +684,24 @@ void interval_state_handler()
 //Function to wrap the calculation and display of estimated total time 
 void total_time_handler()
 {
+  //The estimated duration of the time lapse in seconds
+  unsigned int total_time = numb_shots * intervals[interval_state];
+  //Convert to minutes
+  total_time = total_time/60;
 
+  if(total_time <= 60)
+  {
+    display.print(total_time);
+    display.println(" min");
+  }
   
+  //Convert to hours if needed
+  if(total_time > 60)
+  {
+    total_time = total_time/60;
+    display.print(total_time);
+    display.println(" hrs");
+  }
 }
 
 //Fucntion to handle GFX for panning time lapse menu
