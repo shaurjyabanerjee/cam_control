@@ -3,7 +3,7 @@
 //Shaurjya Banerjee - 2017
 
 //Written to use SSD1306 128x64 monochrome OLED display from Adafruit with I2C
-//Motion control written to use TB6600 Microstep Driver with a 1.8˚/step stepper
+//Motion control calibrated to use TB6600 Microstep Driver with a 1.8˚/step stepper
 //TB6600 set to 2A Microstepping (400 steps/revolution)
 
 //LIBRARIES -----------------------------------------------------------------------
@@ -86,7 +86,7 @@ const int cooldowns[] = {0, 1000, 2000, 4000};
 
 //MISC VARIABLES ------------------------------------------------------------------
 const byte button_delay = 60;
-const int global_shutter_delay = 1000;
+const int  global_shutter_delay = 1000;
   
 #if (SSD1306_LCDHEIGHT != 64)
 #error(F("Height incorrect, please fix Adafruit_SSD1306.h!"));
@@ -276,6 +276,19 @@ void loop()
 //Function to run simple intervalometer routine
 void intervalometer(int num_shots, int interval, int shutter_delay)
 {
+  print_busy();
+  
+  for (int i = 0; i < num_shots; i++)
+  {
+    //Take a shot
+    take_shot(shutter_delay);
+
+    //Wait for desired interval
+    for (int j = 0; j < (interval-1); j++)
+    {
+      delay(1000);
+    }
+  }
   
 }
 
@@ -576,7 +589,6 @@ void stereo_photo_gfx()
     take_stereo_photo(interfocal_steps, shutter_speeds[shutter_speed_state], 
     cooldowns[cooldown_state], step_delay_state);
   }
-  
 }
 
 //Function to wrap the selection and display of shutter speeds
@@ -663,6 +675,11 @@ void time_lapse_gfx()
   total_time_handler();
   display.drawFastVLine(65, 23, 50, WHITE);
   display.display();
+
+  if (button1_state == HIGH)
+  {
+    intervalometer(numb_shots, intervals[interval_state], global_shutter_delay);
+  }
 }
 
 //Function to wrap the selection and display of intervals
@@ -748,30 +765,26 @@ void display_pot_values()
   byte offset = 8;
   
   display.clearDisplay();
-
   display.setCursor(0,0);
   display.setTextColor(WHITE);
   display.setTextSize(2);
   display.println(F("POT VALUES"));
- 
   display.setTextSize(1);
-  display.println(" ");
+  display.println();
   display.print(pot1_val);
   display.fillRect(25, 24, bar1, 7, WHITE);
-  display.println(" ");
+  display.println();
   display.print(pot2_val);
   display.fillRect(25, 24 + offset, bar2, 7, WHITE);
-  display.println(" ");
+  display.println();
   display.print(pot3_val);
   display.fillRect(25, 24 + (offset*2), bar3, 7, WHITE);
-  display.println(" ");
+  display.println();
   display.print(pot4_val);
   display.fillRect(25, 24 + (offset*3), bar4, 7, WHITE);
-  display.println(" ");
-
+  display.println();
   display.display();
 }
-
 
 //Function to display four values as four quadrants
 void display_data_quadrants(int a, int b, int c, int d)
