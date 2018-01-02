@@ -275,9 +275,7 @@ void loop()
 
 //Function to run simple intervalometer routine
 void intervalometer(int num_shots, int interval, int shutter_delay)
-{
-  print_busy();
-  
+{ 
   for (int i = 0; i < num_shots; i++)
   {
     //Take a shot
@@ -286,6 +284,7 @@ void intervalometer(int num_shots, int interval, int shutter_delay)
     //Wait for desired interval
     for (int j = 0; j < (interval-1); j++)
     {
+      print_active_timelapse_state(num_shots, (i+1), (interval-(j+1)) );
       delay(1000);
     }
   }
@@ -497,11 +496,45 @@ void beaver_splashscreen()
 void print_busy()
 {
   display.clearDisplay();
-  //Center the cursor
+  //"Center" the cursor
   display.setCursor(31,22);
   display.setTextColor(WHITE);
   display.setTextSize(3);
   display.println(F("BUSY"));
+  display.display();
+}
+
+//Function to handle displaying a progress bar for the time lapse controller 
+void print_active_timelapse_state (int nshots, int current_shot, int time_to_shot)
+{
+  byte progress_bar = map(current_shot, 1, nshots, 1, 128);
+  display.clearDisplay();
+  
+  display.setCursor(0,0);
+  display.setTextColor(WHITE);
+  display.setTextSize(2);
+  display.println(F("TIME LAPSE"));
+  display.println(F("  ACTIVE"));
+
+  display.setTextColor(WHITE);
+  display.setTextSize(1);
+  display.println();
+  display.println();
+
+  //Print number of shots elapsed
+  display.print(F("SHOTS     "));
+  display.print(current_shot);
+  display.print(F("/"));
+  display.println(nshots);
+
+  //Print time left to next shot
+  display.print(F("NEXT IN   "));
+  display.print(time_to_shot);
+  display.println(F("sec"));
+
+  //Other graphical elements
+  display.fillRect(0, 34, progress_bar, 9, WHITE);
+  display.drawFastVLine(52, 47, 20, WHITE);
   display.display();
 }
 
