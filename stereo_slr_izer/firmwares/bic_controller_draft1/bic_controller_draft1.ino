@@ -292,10 +292,29 @@ void intervalometer(int num_shots, int interval, int shutter_delay)
 }
 
 //Function to run panning intervalometer routine
-void panning_intervalometer()
+void panning_intervalometer(int num_shots, int interval, int dist,  int sh_delay)
 {
-  
+  int dist_per_step = dist/num_shots;
+
+  for (int i = 0; i < num_shots; i++)
+  {
+    //Take a shot
+    take_shot(sh_delay); 
+
+    //Move required distance
+    move_steps(dist_per_step, 1, 300);
+
+    //Wait for the desired interval
+    for (int j = 0; j < (interval-1); j++)
+    {
+      print_active_timelapse_state(num_shots, (i+1), (interval-(j+1)) );
+      delay(1000);
+    }
+  }
+  //Reset to original position
+  move_steps(dist, 0, 300);
 }
+  
 
 //Function to run stereo photography routine
 void take_stereo_photo(int dist, int sh_delay, int cooldown, int spd)
@@ -390,11 +409,12 @@ void gfx_handler()
     time_lapse_gfx();
   }
 
-  //MENU3 - QUADRANT VIEW
+  //MENU3 - PANNING TIME LAPSE
   if (enter_state != 0 && menu_state == 3)
   {
     display.clearDisplay();
-    display_data_quadrants(666,666,666,666);
+    panning_time_lapse_gfx();
+    
   }
 
   //MENU4 - VIDEO SLIDER
@@ -563,7 +583,7 @@ void display_menu()
   display.setTextColor(WHITE);
   if (menu_state == 3) {display.setTextColor(BLACK, WHITE);}
   else if (menu_state != 3) {display.setTextColor(WHITE,BLACK);}
-  display.println(F("QUADRANT VIEW       "));
+  display.println(F("PANNING TIME LAPSE   "));
 
   //MENU ITEM 4 - 
   display.setTextColor(WHITE);
@@ -682,6 +702,13 @@ void visualize_interfocal_travel()
   display.fillRect(0, 19, temp, 8, WHITE);
 }
 
+//Fucntion to wrap the display of a bar graph to visualize panning travel
+void visualize_panning_travel()
+{
+  byte temp = map(interfocal_steps, 0, max_steps, 0, 126);
+  display.fillRect(0, 19, temp, 8, WHITE);
+}
+
 //Function to handle GFX for time lapse submenu
 void time_lapse_gfx()
 {
@@ -713,6 +740,46 @@ void time_lapse_gfx()
   {
     intervalometer(numb_shots, intervals[interval_state], global_shutter_delay);
   }
+}
+
+//Function to handle the GFX for the panning time lapse submenu
+void panning_time_lapse_gfx()
+{
+  numb_shots          = map(pot1_val, 0, 1010, 1, 80);
+  interval_state      = map(pot2_val, 0, 1000, 0, 19);
+  inter_focal_state   = map(pot3_val, 0, 900, 0, 10);
+  interfocal_steps    = inter_focals[inter_focal_state] * steps_per_inch;
+  numb_shots = numb_shots * 25; 
+  
+  display.setCursor(0,0);
+  display.setTextColor(WHITE);
+  display.setTextSize(2);
+  display.println(F("P.TIMELAPS"));
+
+  //Write Submenu Items
+  display.setTextSize(1);
+  display.println();
+  display.println();
+  display.print(F("NUM SHOTS   "));
+  display.print(numb_shots);
+  display.println();
+  display.print(F("INTERVAL    "));
+  interval_state_handler();
+  display.print(F("DISTANCE    "));
+  inter_focal_state_handler();
+  display.print(F("TOTAL TIME  "));
+  total_time_handler();
+  visualize_panning_travel();
+  display.drawFastVLine(65, 30, 33, WHITE);
+  
+
+  display.display();
+
+  if (button1_state == HIGH)
+  {
+    panning_intervalometer(numb_shots, intervals[interval_state], interfocal_steps, global_shutter_delay);
+  }
+  
 }
 
 //Function to wrap the selection and display of intervals
@@ -755,10 +822,7 @@ void total_time_handler()
 }
 
 //Fucntion to handle GFX for panning time lapse menu
-void panning_time_lapse_gfx()
-{
-  
-}
+
 
 //Function to enable manual control of slider using buttons
 void manual_jog()
