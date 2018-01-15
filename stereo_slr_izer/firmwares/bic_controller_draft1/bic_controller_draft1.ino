@@ -63,18 +63,19 @@ int pot2_val = 0;
 int pot3_val = 0;
 int pot4_val = 0;
 
-byte menu_state  = 0;
-byte enter_state = 0;
-byte is_busy     = 0;
-byte print_state = 0;
-byte shutter_speed_state = 0;
-byte inter_focal_state   = 0;
-int temp_step_counter    = 0;
-int interfocal_steps     = 0;
-int cooldown_state       = 0;
-int step_delay_state     = 0;
-int numb_shots           = 0;
-int interval_state       = 0;
+byte menu_state           = 0;
+byte enter_state          = 0;
+byte is_busy              = 0;
+byte print_state          = 0;
+byte shutter_speed_state  = 0;
+byte inter_focal_state    = 0;
+byte kill_timelapse_state = 0;
+int temp_step_counter     = 0;
+int interfocal_steps      = 0;
+int cooldown_state        = 0;
+int step_delay_state      = 0;
+int numb_shots            = 0;
+int interval_state        = 0;
 
 const int intervals[] =
 {3, 5, 7, 10, 12, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 90, 120, 150, 180, 240};
@@ -284,11 +285,17 @@ void intervalometer(int num_shots, int interval, int shutter_delay)
     //Wait for desired interval
     for (int j = 0; j < (interval-1); j++)
     {
+      //Check for exit pin
+      button4_state = digitalRead(button4_pin);
+      if (button4_state == HIGH) {break;}
+      
+      //Print active timelapse state 
       print_active_timelapse_state(num_shots, (i+1), (interval-(j+1)) );
       delay(1000);
     }
+    //Check for exit pin
+    if (button4_state == HIGH) {break;}
   }
-  
 }
 
 //Function to run panning intervalometer routine
@@ -307,9 +314,15 @@ void panning_intervalometer(int num_shots, int interval, int dist,  int sh_delay
     //Wait for the desired interval
     for (int j = 0; j < (interval-1); j++)
     {
+      //Check for exit pin
+      button4_state = digitalRead(button4_pin);
+      if (button4_state == HIGH) {break;}
+      
       print_active_timelapse_state(num_shots, (i+1), (interval-(j+1)) );
       delay(1000);
     }
+    //Check for exit pin
+    if (button4_state == HIGH) {break;}
   }
   //Reset to original position
   move_steps(dist, 0, 300);
@@ -772,14 +785,12 @@ void panning_time_lapse_gfx()
   visualize_panning_travel();
   display.drawFastVLine(65, 30, 33, WHITE);
   
-
   display.display();
-
+  
   if (button1_state == HIGH)
   {
     panning_intervalometer(numb_shots, intervals[interval_state], interfocal_steps, global_shutter_delay);
   }
-  
 }
 
 //Function to wrap the selection and display of intervals
