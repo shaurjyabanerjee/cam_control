@@ -6,6 +6,15 @@
 //Motion control calibrated to use TB6600 Microstep Driver with a 1.8˚/step stepper
 //TB6600 set to 2A Microstepping (400 steps/revolution)
 
+//New controller button layout 
+//|   B2   |   B1   |
+//|   B4   |   B3   |
+
+//Button 1 - Enter/Exit Menu
+//Button 2 - Menu Up
+//Button 3 - Menu Down 
+//Button 4 - Start Routine
+
 //LIBRARIES -----------------------------------------------------------------------
 #include <SPI.h>
 #include <Wire.h>
@@ -86,7 +95,7 @@ const int shutter_speeds[] =
 const int cooldowns[] = {0, 1000, 2000, 4000};
 
 //MISC VARIABLES ------------------------------------------------------------------
-const byte button_delay = 60;
+const byte button_delay = 100;
 const int  global_shutter_delay = 1000;
   
 #if (SSD1306_LCDHEIGHT != 64)
@@ -275,6 +284,7 @@ void loop()
 //CAMERA CONTROL FUNCTIONS --------------------------------------------------------
 
 //Function to run simple intervalometer routine
+//Updated for new button layout
 void intervalometer(int num_shots, int interval, int shutter_delay)
 { 
   for (int i = 0; i < num_shots; i++)
@@ -286,19 +296,20 @@ void intervalometer(int num_shots, int interval, int shutter_delay)
     for (int j = 0; j < (interval-1); j++)
     {
       //Check for exit pin
-      button4_state = digitalRead(button4_pin);
-      if (button4_state == HIGH) {break;}
+      button1_state = digitalRead(button1_pin);
+      if (button1_state == HIGH) {break;}
       
       //Print active timelapse state 
       print_active_timelapse_state(num_shots, (i+1), (interval-(j+1)) );
       delay(1000);
     }
     //Check for exit pin
-    if (button4_state == HIGH) {break;}
+    if (button1_state == HIGH) {break;}
   }
 }
 
 //Function to run panning intervalometer routine
+//Updated for new button layout
 void panning_intervalometer(int num_shots, int interval, int dist,  int sh_delay)
 {
   int dist_per_step = dist/num_shots;
@@ -315,14 +326,14 @@ void panning_intervalometer(int num_shots, int interval, int dist,  int sh_delay
     for (int j = 0; j < (interval-1); j++)
     {
       //Check for exit pin
-      button4_state = digitalRead(button4_pin);
-      if (button4_state == HIGH) {break;}
+      button1_state = digitalRead(button1_pin);
+      if (button1_state == HIGH) {break;}
       
       print_active_timelapse_state(num_shots, (i+1), (interval-(j+1)) );
       delay(1000);
     }
     //Check for exit pin
-    if (button4_state == HIGH) {break;}
+    if (button1_state == HIGH) {break;}
   }
   //Reset to original position
   move_steps(dist, 0, 300);
@@ -373,10 +384,11 @@ void control_poller()
   pot4_val = analogRead(pot4_pin);
 }
 
+//Updated function for new button layout
 void control_interpreter()
 {
-  //BUTTON 1 - INCREMENTS MENU STATE
-  if (button1_state == HIGH && enter_state == LOW)
+  //BUTTON 4 - INCREMENTS MENU STATE
+  if (button4_state == HIGH && enter_state == LOW)
   {
     menu_state ++;
     menu_state = menu_state%7;
@@ -389,14 +401,14 @@ void control_interpreter()
     if (menu_state == 0) {menu_state = 7;}
     delay(button_delay);
   }
-  //BUTTON 3 - ENTER
-  if (button3_state == HIGH)
+  //BUTTON 1 - ENTER
+  if (button1_state == HIGH && enter_state == LOW)
   {
     enter_state = HIGH;
     delay(button_delay);
   }
   //BUTTON 4 - BACK
-  if (button4_state == HIGH)
+  else if (button1_state == HIGH && enter_state == HIGH)
   {
     enter_state = LOW;
     delay(button_delay);
@@ -620,6 +632,7 @@ void display_menu()
 }
 
 //Function to handle GFX for Stereo Photography Submenu
+//Updated for new button layout
 void stereo_photo_gfx()
 {
   inter_focal_state   = map(pot1_val, 0, 900, 0, 10);
@@ -650,7 +663,7 @@ void stereo_photo_gfx()
   display.display();
   
   //Trigger stereo shot
-  if (button1_state == HIGH)
+  if (button3_state == HIGH)
   {
     take_stereo_photo(interfocal_steps, shutter_speeds[shutter_speed_state], 
     cooldowns[cooldown_state], step_delay_state);
@@ -723,6 +736,7 @@ void visualize_panning_travel()
 }
 
 //Function to handle GFX for time lapse submenu
+//Updated for new button layout
 void time_lapse_gfx()
 {
   numb_shots     = map(pot1_val, 0, 1010, 1, 80);
@@ -749,7 +763,7 @@ void time_lapse_gfx()
   display.drawFastVLine(65, 23, 50, WHITE);
   display.display();
 
-  if (button1_state == HIGH)
+  if (button3_state == HIGH)
   {
     intervalometer(numb_shots, intervals[interval_state], global_shutter_delay);
   }
@@ -787,7 +801,7 @@ void panning_time_lapse_gfx()
   
   display.display();
   
-  if (button1_state == HIGH)
+  if (button3_state == HIGH)
   {
     panning_intervalometer(numb_shots, intervals[interval_state], interfocal_steps, global_shutter_delay);
   }
