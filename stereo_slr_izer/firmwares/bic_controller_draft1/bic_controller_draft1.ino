@@ -446,6 +446,7 @@ void gfx_handler()
   if (enter_state != 0 && menu_state == 4)
   {
     display.clearDisplay();
+    video_slider_gfx();
   }
 
   //MENU5 - BAR GRAPH
@@ -846,7 +847,24 @@ void total_time_handler()
   }
 }
 
-//Fucntion to handle GFX for panning time lapse menu
+//Fucntion to handle GFX for video slider
+void video_slider_gfx()
+{
+  display.setCursor(0,0);
+  display.setTextColor(WHITE);
+  display.setTextSize(2);
+  display.println(F("VID SLIDER"));
+
+  display.setTextSize(1);
+  display.println();
+  display.print(F("DISTANCE    "));
+  display.println();
+  display.print(F("SPEED       "));
+  display.println();
+
+  display.display();
+  
+}
 
 
 //Function to enable manual control of slider using buttons
