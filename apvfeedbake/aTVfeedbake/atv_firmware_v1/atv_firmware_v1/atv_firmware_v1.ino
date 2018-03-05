@@ -8,6 +8,8 @@
 
 TVout TV;
 
+int n[9] = { 1, 1, 1, 1, 1, 1, 1, 1, 1, };
+
 //VARIABLES-------------------------------------------------------------------------
 
 byte enter_state = 0;
@@ -109,7 +111,7 @@ void bytebeat_le()
 
 void bytebeat_editor()
 {
-  
+
 }
 
 void oscillopgraphics(byte state)
@@ -217,10 +219,31 @@ void bytebeat_editor_gfx()
   TV.select_font(font8x8);
   TV.println("BYTEBEAT EDITOR");
 
-  if (button3_state == HIGH)
-  {
-    bytebeat_editor();
-  }
+   
+    pot1_val = analogRead(pot1_pin);
+    pot2_val = analogRead(pot2_pin);
+
+    byte selectionIndex = map(pot2_val, 0, 1024, 0, 8);
+    n[selectionIndex] = map(pot1_val, 0, 1024, 0, 15);
+
+    t++;
+
+    for (int i = 0; i <= 8; i++)
+    {
+        TV.print(n[i]); TV.print(" ");
+    }
+
+    int bbval = ((t << n[0]) ^ ((t << n[1]) + (t >> n[2]) & t >> n[3])) | t >> (n[4] - (n[5] ^ n[6] & (t >> n[7]))) | t >> n[8];
+
+    PORTD = bbval;
+    
+    delayMicroseconds(5 + pot1_val);
+}
+
+void balls()
+{
+
+  
 }
 
 void bytebeat_le_gfx()
