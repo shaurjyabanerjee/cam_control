@@ -3,8 +3,6 @@
 
 #include <TVout.h>
 #include <TVoutfonts/fontALL.h>
-#include "schematic.h"
-#include "TVOlogo.h"
 
 TVout TV;
 
@@ -100,6 +98,8 @@ void bytebeat_le()
     (t >> shift_amt_1) & t >> shift_amt_2)) | 
     t >> (4 - (1 ^ shift_amt_1 & (t >> shift_amt_2))) | 
     t >> shift_amt_1;
+
+    bytebeat_viz(bbval);
     
     bbval = bbval >> post_bbcalc_shift;
     bbval = bbval & 0b1111;
@@ -235,15 +235,10 @@ void bytebeat_editor_gfx()
 
     int bbval = ((t << n[0]) ^ ((t << n[1]) + (t >> n[2]) & t >> n[3])) | t >> (n[4] - (n[5] ^ n[6] & (t >> n[7]))) | t >> n[8];
 
-    PORTD = bbval;
+    bytebeat_viz(bbval);
+    PORTD = bbval & 0b1111;
     
     delayMicroseconds(5 + pot1_val);
-}
-
-void balls()
-{
-
-  
 }
 
 void bytebeat_le_gfx()
@@ -256,6 +251,57 @@ void bytebeat_le_gfx()
   TV.println("((t << 1) ^ ((t << 1) + (t >> 7) & t >> 12)) | t >> (4 - (1 ^ 7 & (t >> 15))) | t >> 7");
 
   bytebeat_le();
+}
+
+void bytebeat_viz(int16_t n)
+{
+    // int bbval = ((t << 1) ^ ((t << 1) + (t >> 7) & t >> 12)) | t >> (4 - (1 ^ 7 & (t >> 15))) | t >> 7;
+    int bbval = n;//((t * (t >> 8 | t >> 9) & 46 & t >> 8)) ^ (t & t >> 13 | t >> 6);
+    control_poller();
+
+    int8_t shiftx = 1, shifty = 1;
+
+    uint8_t *dst = display.screen;
+    uint8_t *src = display.screen + display.hres;
+    uint8_t *end = display.screen + display.vres*display.hres;
+    uint8_t tmp = 0;
+    // int mode = map(pot1_val, 1024, 0, 0, 7);
+    int mode = (bbval >> 1) & 7;
+    switch (mode) {
+        case 3: {
+            while (src <= end) {
+                tmp = *dst;
+                *dst = *src;
+                *src = tmp;
+                dst++;
+                src++;
+            }
+            break;
+        }
+        case 5: {
+            TV.select_font((const unsigned char*) 0x100);
+            TV.write((char*)bbval, (bbval >> 3) & 7);
+            break;
+        }
+        case 6: {
+            TV.select_font(font6x8);
+            TV.write((char*)bbval, bbval & 0xc);
+            break;
+        }
+        case 7: {
+            while (src <= end) {
+                tmp = *dst;
+                *dst = ~(*src);
+                *src ^= tmp;
+                dst++;
+                src++;
+            }
+            break;
+        }
+        default: {
+            break;
+        }
+    }
 }
 
 void cv_tv_gfx()
