@@ -10,7 +10,7 @@ int n[9] = { 1, 1, 1, 1, 1, 1, 1, 1, 1, };
 
 //VARIABLES-------------------------------------------------------------------------
 
-byte enter_state = 0;
+byte enter_state = 1;
 byte menu_state = 1;
 byte print_state = 0;
 
@@ -59,7 +59,7 @@ void setup()
   pinMode(trig1_pin, INPUT);
   pinMode(trig2_pin, INPUT);
 
-  for (int i = 0; i < 4; i++) {
+  for (int i = 0; i < 5; i++) {
     pinMode(i, OUTPUT);
     digitalWrite(i, HIGH);
   }
@@ -102,7 +102,7 @@ void bytebeat_le()
     bytebeat_viz(bbval);
     
     bbval = bbval >> post_bbcalc_shift;
-    bbval = bbval & 0b1111;
+    bbval = bbval & 0b11111;
     PORTD = bbval;
     
     delayMicroseconds(5 + pot1_val);
@@ -217,7 +217,7 @@ void gfx_handler()
 void bytebeat_editor_gfx()
 {
   TV.select_font(font8x8);
-  TV.println("BYTEBEAT EDITOR");
+//  TV.println("BYTEBEAT EDITOR");
 
    
     pot1_val = analogRead(pot1_pin);
@@ -235,8 +235,10 @@ void bytebeat_editor_gfx()
 
     int bbval = ((t << n[0]) ^ ((t << n[1]) + (t >> n[2]) & t >> n[3])) | t >> (n[4] - (n[5] ^ n[6] & (t >> n[7]))) | t >> n[8];
 
+    bbval = bbval & 0b11111;
+
     bytebeat_viz(bbval);
-    PORTD = bbval & 0b1111;
+    PORTD = bbval;
     
     delayMicroseconds(5 + pot1_val);
 }
@@ -252,7 +254,7 @@ void bytebeat_le_gfx()
 
   bytebeat_le();
 }
-
+#if 1
 void bytebeat_viz(int16_t n)
 {
     // int bbval = ((t << 1) ^ ((t << 1) + (t >> 7) & t >> 12)) | t >> (4 - (1 ^ 7 & (t >> 15))) | t >> 7;
@@ -268,6 +270,18 @@ void bytebeat_viz(int16_t n)
     // int mode = map(pot1_val, 1024, 0, 0, 7);
     int mode = (bbval >> 1) & 7;
     switch (mode) {
+//        case 0: {
+//            TV.screen[bbval & 0xff] ^= bbval >> 12;
+//            break;
+//        }
+//        case 1: {
+//            TV.screen[bbval >> 3] |= (bbval & 0xff);
+//            break;
+//        }
+//        case 2: {
+//            TV.screen[bbval >> 3] ^= (bbval & 0xff);
+//            break;
+//        }
         case 3: {
             while (src <= end) {
                 tmp = *dst;
@@ -278,6 +292,10 @@ void bytebeat_viz(int16_t n)
             }
             break;
         }
+//        case 4: {
+//            TV.screen[bbval >> 3] = ~(bbval & 0xff);
+//            break;
+//        }
         case 5: {
             TV.select_font((const unsigned char*) 0x100);
             TV.write((char*)bbval, (bbval >> 3) & 7);
@@ -303,6 +321,7 @@ void bytebeat_viz(int16_t n)
         }
     }
 }
+#endif
 
 void cv_tv_gfx()
 {
@@ -402,8 +421,13 @@ void splashscreen()
   TV.println("");
   TV.println("");
   TV.println(" APVFeedBakE");
-  TV.delay(2000);
-  TV.println("A FUxxeD UP TV");
+  TV.delay(2000);  TV.fill(2);
+  delay(50);  TV.fill(2);
+  delay(50);  TV.fill(2);
+  delay(50);  TV.fill(2);
+  delay(50);  TV.fill(2);
+  delay(50);  TV.fill(2);
+  delay(50);
   TV.println("");
   TV.delay(3000);
  
