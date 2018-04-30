@@ -11,7 +11,7 @@ int n[9] = { 1, 1, 1, 1, 1, 1, 1, 1, 1, };
 //VARIABLES-------------------------------------------------------------------------
 
 byte enter_state = 1;
-byte menu_state = 1;
+byte menu_state = 6;
 byte print_state = 0;
 
 byte osc_state = 0;
@@ -50,6 +50,17 @@ int t = 69;
 
 const byte button_delay = 300;
 
+const int RELAY_MASK = 0b10011111;
+
+// demo modes-----------------------------------------------------------
+int demo_timer = 0;
+int demo_mode = 0;
+int this_time = 0;
+int last_time = 0;
+
+const int DEMO_TIME = 10000; // ms
+// ---------------------------------------------------------------------
+
 void setup() 
 { 
   pinMode(button1_pin, INPUT);
@@ -59,10 +70,15 @@ void setup()
   pinMode(trig1_pin, INPUT);
   pinMode(trig2_pin, INPUT);
 
-  for (int i = 0; i < 5; i++) {
+  for (int i = 0; i < 6; i++) {
     pinMode(i, OUTPUT);
     digitalWrite(i, HIGH);
   }
+
+  pinMode(8, OUTPUT);
+
+  enable_menu();
+
   
   TV.begin(NTSC,120,96);
   splashscreen();
@@ -102,14 +118,15 @@ void bytebeat_le()
     bytebeat_viz(bbval);
     
     bbval = bbval >> post_bbcalc_shift;
-    bbval = bbval & 0b11111;
+    bbval = bbval & RELAY_MASK;
     PORTD = bbval;
+    PORTB = (bbval >> 2) & 1;
     
     delayMicroseconds(5 + pot1_val);
   } 
 }
 
-void bytebeat_editor()
+void bb_single()
 {
 
 }
@@ -128,31 +145,127 @@ void oscillopgraphics(byte state)
   } 
 }
 
-void cv_tv()
+void demo() {
+    last_time = this_time;
+    this_time = millis();
+
+    demo_timer += (this_time - last_time);
+
+    bool splash = true;
+
+    switch (demo_mode) {
+        case 0: {
+              video1();
+            break;
+        }
+        case 1: {
+            video2();
+            break;
+        }
+        case 2: {
+            oscillopgraphics(HIGH);
+            digitalWrite(2, HIGH);
+            digitalWrite(3, HIGH);
+            break;
+        }
+        case 3: {
+            enable_menu();
+                pot1_val = analogRead(pot1_pin);
+                pot2_val = analogRead(pot2_pin);
+                pot3_val = analogRead(pot3_pin);
+                button1_state = digitalRead(button1_pin);
+            
+                byte shift_amt_0 = pot2_val >> 8;
+                byte shift_amt_1 = pot2_val >> 6;
+                byte shift_amt_2 = pot2_val >> 4;
+            
+                byte post_bbcalc_shift = pot3_val >> 7;
+                
+                t++;
+              
+                int bbval = ((t << shift_amt_0) ^ ((t << shift_amt_0) + 
+                (t >> shift_amt_1) & t >> shift_amt_2)) | 
+                t >> (4 - (1 ^ shift_amt_1 & (t >> shift_amt_2))) | 
+                t >> shift_amt_1;
+            
+                bytebeat_viz(bbval);
+                
+                bbval = bbval >> post_bbcalc_shift;
+                bbval = bbval & RELAY_MASK;
+                PORTD = bbval;
+                PORTB = (bbval >> 2) & 1;
+                
+                delayMicroseconds(5 + pot1_val);
+            break;
+        }
+
+        case 4: {
+            enable_menu();  
+            if (splash) {
+                splashscreen();
+                splash = false;
+            }
+            break;
+        }
+        case 5: {
+              enable_menu();  
+              splash = true; // on the next cycle show the spash screen once
+              pot1_val = analogRead(pot1_pin);
+              pot2_val = analogRead(pot2_pin);
+              pot3_val = analogRead(pot3_pin);
+              button1_state = digitalRead(button1_pin);
+          
+              byte shift_amt_0 = pot2_val >> 8;
+              byte shift_amt_1 = pot2_val >> 6;
+              byte shift_amt_2 = pot2_val >> 4;
+          
+              byte post_bbcalc_shift = pot3_val >> 7;
+              
+              t++;
+            
+              int bbval = ((t << shift_amt_0) ^ ((t << shift_amt_0) + 
+              (t >> shift_amt_1) & t >> shift_amt_2)) | 
+              t >> (4 - (1 ^ shift_amt_1 & (t >> shift_amt_2))) | 
+              t >> shift_amt_1;
+              
+              bytebeat_viz(bbval);
+              
+              delay(5 + pot1_val);
+            break;
+        }
+        default: {
+            break;
+        }
+    }
+
+    if (demo_timer > DEMO_TIME) {
+        demo_timer = 0;
+        demo_mode++;
+
+        if (demo_mode > 5) {
+            demo_mode = 0;
+        }
+    }
+}
+
+void video1()
 {
-  if (trig1_state == LOW)
-  {
-    digitalWrite(relayh, LOW);
-    digitalWrite(relayv, LOW);
-  }
+    digitalWrite(0, HIGH);
+    digitalWrite(1, HIGH);
+    digitalWrite(2, HIGH);
+    digitalWrite(3, HIGH);
+    digitalWrite(4, HIGH);
+    digitalWrite(8, HIGH);
+}
 
-  if (trig1_state == HIGH)
-  {
-    digitalWrite(relayh, HIGH);
-    digitalWrite(relayv, HIGH);
-  }
-
-  if (trig2_state == LOW)
-  {
-    digitalWrite(relaym1, LOW);
-    digitalWrite(relaym2, LOW);
-  }
-
-  if (trig2_state == HIGH)
-  {
-    digitalWrite(relaym1, HIGH);
-    digitalWrite(relaym2, HIGH);
-  }
+void video2()
+{
+    digitalWrite(0, HIGH);
+    digitalWrite(1, HIGH);
+    digitalWrite(2, HIGH);
+    digitalWrite(3, HIGH);
+    digitalWrite(4, HIGH);
+    digitalWrite(8, LOW);
 }
 
 
@@ -171,20 +284,19 @@ void gfx_handler()
   if (enter_state != 0 && menu_state == 2)
   {
     TV.clear_screen();
-    bytebeat_editor_gfx();
+//    bytebeat_editor_gfx();
   }
 
   //MENU3 - CV TV 
   if (enter_state != 0 && menu_state == 3)
   {
-    TV.clear_screen();
-    cv_tv_gfx();
+    video1();
   }
 
   //MENU4 - MAGNETS
   if (enter_state != 0 && menu_state == 4)
   {
-    TV.clear_screen();
+    video2();
     
   }
 
@@ -198,8 +310,7 @@ void gfx_handler()
   //MENU6 - DEBUG
   if (enter_state != 0 && menu_state == 6)
   {
-    TV.clear_screen();
-    oscillopgraphics(HIGH);
+    demo();
   }
 
   
@@ -208,6 +319,7 @@ void gfx_handler()
   //Go back to main mode choosing menu
   if (enter_state == 0 && (button1_state == HIGH || button2_state == HIGH || button4_state == HIGH))
   {
+    enable_menu();
     TV.clear_screen();
     display_menu();
     print_state = 0;
@@ -235,9 +347,16 @@ void bytebeat_editor_gfx()
 
     int bbval = ((t << n[0]) ^ ((t << n[1]) + (t >> n[2]) & t >> n[3])) | t >> (n[4] - (n[5] ^ n[6] & (t >> n[7]))) | t >> n[8];
 
-    bbval = bbval & 0b11111;
+    bbval = bbval & RELAY_MASK;
 
+    // in demo mode, this might fuck up the other one (bytebeat le) since they both call this function
+    // for whatever reason, this doesnt really do that much cool stuff anyway, so it clears out the screen
+    // which makes the bytebeat le one not do as much cool stuff (or any)
+
+#if 0
     bytebeat_viz(bbval);
+#endif
+
     PORTD = bbval;
     
     delayMicroseconds(5 + pot1_val);
@@ -325,12 +444,21 @@ void bytebeat_viz(int16_t n)
 
 void cv_tv_gfx()
 {
-  TV.select_font(font8x8);
-  TV.println("");
-  TV.println("");
-  TV.println("");
-  TV.println("CV TV");
-  cv_tv();
+//  TV.select_font(font8x8);
+//  TV.println("");
+//  TV.println("");
+//  TV.println("");
+//  TV.println("CV TV");
+//  cv_tv();
+}
+
+void enable_menu()
+{
+    digitalWrite(8, HIGH);
+    digitalWrite(4, LOW);
+
+    digitalWrite(relayh, HIGH);
+    digitalWrite(relayv, HIGH);
 }
 
 void display_menu()
@@ -342,28 +470,30 @@ void display_menu()
   TV.println("");
 
   //MENU ITEM 1 -
-  if (menu_state == 1) {TV.println("FAST BYTEBEAT <----");}
-  else if (menu_state != 1) {TV.println("FAST BYTEBEAT");}  
+  if (menu_state == 1) {TV.println("BYTEBEAT <----");}
+  else if (menu_state != 1) {TV.println("BYTEBEAT");}  
 
   //MENU ITEM 2 -
+#if 0
    if (menu_state == 2) {TV.println("SLOW BYTEBEAT <----");}
   else if (menu_state != 2) {TV.println("SLOW BYTEBEAT");}
+#endif
 
   //MENU ITEM 3 -
-  if (menu_state == 3) {TV.println("CV TV <-----------");}
-  else if (menu_state != 3) {TV.println("CV TV");}
+  if (menu_state == 3) {TV.println("VID 1 <-----------");}
+  else if (menu_state != 3) {TV.println("VID 1");}
 
   //MENU ITEM 4 -
-  if (menu_state == 4) {TV.println("MAGNETS <----------");}
-  else if (menu_state != 4) {TV.println("MAGNETS");}
+  if (menu_state == 4) {TV.println("VID 2 <----------");}
+  else if (menu_state != 4) {TV.println("VID 2");}
 
   //MENU ITEM 5 - 
   if (menu_state == 5) {TV.println("OSCILLOGRAFIX <----");}
   else if (menu_state != 5) {TV.println("OSCILLOGRAFIX");}
 
   //MENU ITEM 6 - 
-  if (menu_state == 6) {TV.println("DEBUG <------------");}
-  else if (menu_state != 6) {TV.println("DEBUG");}
+  if (menu_state == 6) {TV.println("DEMO <-----------");}
+  else if (menu_state != 6) {TV.println("DEMO");}
 
   delay(button_delay);
 }
@@ -415,23 +545,17 @@ void control_interpreter()
 
 void splashscreen()
 {
-  TV.select_font(font8x8);
-  TV.println("");
-  TV.println("");
-  TV.println("");
-  TV.println("");
-  TV.println(" APVFeedBakE");
-  TV.delay(2000);  TV.fill(2);
-  delay(50);  TV.fill(2);
-  delay(50);  TV.fill(2);
-  delay(50);  TV.fill(2);
-  delay(50);  TV.fill(2);
-  delay(50);  TV.fill(2);
-  delay(50);
-  TV.println("");
-  TV.delay(3000);
- 
   TV.clear_screen();
+  TV.select_font(font8x8);
+  TV.println(" ");  TV.println(" ");
+  TV.println("  APVFeedBakE");
+  TV.delay(3000);  
+  for( int i = 0; i < 10; i++ ) {
+    TV.fill(2);
+    TV.delay(50);
+  }
+    TV.println("  2018");
+  TV.delay(3000); 
 }
 
 
