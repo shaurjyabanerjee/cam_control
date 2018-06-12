@@ -20,11 +20,19 @@
 #include <Wire.h>
 #include <Adafruit_GFX.h>
 #include <Adafruit_SSD1306.h>
+#include <InputDebounce.h>
 
 //SCREEN STUFF --------------------------------------------------------------------
 
 #define OLED_RESET 4
 Adafruit_SSD1306 display(OLED_RESET);
+
+// AXIS NAMES
+enum Axes {
+  X_AXIS = 1,
+  P_AXIS = 2,
+  T_AXIS = 3
+};
 
 //MOTOR CONTROL PINS --------------------------------------------------------------
 const byte pul_pin1    = 8;
@@ -40,9 +48,9 @@ long int test_steps = 24000;
 const int pulse_delay = 50; //In microseconds
 
 //GLOBAL POSITIONING VARIABLES ----------------------------------------------------
-int x_position = 0;
-int p_position = 0;
-int r_position = 0;
+signed long x_position = 0;
+signed long p_position = 0;
+signed long t_position = 0;
 
 //LINEAR DISTANCE VARIABLES -------------------------------------------------------
 const int steps_per_inch = 1266;  //Number of steps to move one inch linearly
@@ -65,6 +73,11 @@ const byte pot3_pin = A2;
 const byte pot4_pin = A3;
 
 //STATE VARIABLES -----------------------------------------------------------------
+static InputDebounce button1;
+static InputDebounce button2;
+static InputDebounce button3;
+static InputDebounce button4;
+
 byte button1_state = 0;
 byte button2_state = 0;
 byte button3_state = 0;
@@ -246,6 +259,16 @@ void setup()
    pinMode(pul_pin3, OUTPUT);
    pinMode(dir_pin3, OUTPUT);
 
+  // debounce Library -------------------------------------------
+  // register callback functions (shared, used by all buttons)
+  buttonTestA.registerCallbacks(buttonTest_pressedCallback, buttonTest_releasedCallback, buttonTest_pressedDurationCallback, buttonTest_releasedDurationCallback);
+  buttonTestB.registerCallbacks(buttonTest_pressedCallback, buttonTest_releasedCallback, buttonTest_pressedDurationCallback, buttonTest_releasedDurationCallback);
+  
+  // setup input buttons (debounced)
+  button1.setup(pinSwitchA, BUTTON_DEBOUNCE_DELAY, InputDebounce::PIM_INT_PULL_UP_RES);
+  button2.setup(pinSwitchB, BUTTON_DEBOUNCE_DELAY, InputDebounce::PIM_INT_PULL_UP_RES, 300); // single-shot pressed-on time duration callback
+  // ------------------------------------------------------------
+
    //Set default states of digital outs
    digitalWrite(shutter_pin, HIGH);
    
@@ -264,6 +287,7 @@ void loop()
 {
   control_poller();
   manual_jog();
+  keyframe_loop();
 }
 
 //CAMERA CONTROL FUNCTIONS --------------------------------------------------------
@@ -272,6 +296,7 @@ void loop()
 //CONTROLLER FUNCTIONS ------------------------------------------------------------
 void control_poller()
 {
+#if 0
   button1_state = digitalRead(button1_pin);
   button2_state = digitalRead(button2_pin);
   button3_state = digitalRead(button3_pin);
@@ -281,6 +306,14 @@ void control_poller()
   pot2_val = analogRead(pot2_pin);
   pot3_val = analogRead(pot3_pin);
   pot4_val = analogRead(pot4_pin);
+#else
+  // poll button state
+  unsigned long now = millis();
+  button1.process(now); // callbacks called in context of this function
+  button2.process(now);
+  button3.process(now); // callbacks called in context of this function
+  button4.process(now);
+#endif
 }
 
 
@@ -360,6 +393,7 @@ void manual_jog()
   if (button4_state == HIGH)
   {
     drive_step(0,axis_state);
+    
   }
 
   if (button2_state == HIGH)
@@ -386,6 +420,7 @@ void manual_jog()
     else if (axis_state == 2)
     {
       display.println(F("P AXIS"));  
+      display.println(p_position);
     }
     delay(120);
     display.display();
@@ -397,7 +432,7 @@ void manual_jog()
 //Function to drive stepper motor forward one step
 void drive_step(int dir, int axis)
 {
-  if (axis == 1)
+  if (axis == X_AXIS)
   {
     if (dir == 0)
     {
@@ -406,6 +441,7 @@ void drive_step(int dir, int axis)
       delayMicroseconds(pulse_delay);
       digitalWrite(pul_pin1, LOW);
       delayMicroseconds(pulse_delay);
+      x_position--;
     }
   
     else if (dir == 1)
@@ -415,10 +451,11 @@ void drive_step(int dir, int axis)
       delayMicroseconds(pulse_delay);
       digitalWrite(pul_pin1, LOW);
       delayMicroseconds(pulse_delay);
+      x_position++;
     }
   }
 
-  else if (axis == 2)
+  else if (axis == P_AXIS)
   {
     if (dir == 0)
     {
@@ -427,6 +464,7 @@ void drive_step(int dir, int axis)
       delayMicroseconds(pulse_delay);
       digitalWrite(pul_pin2, LOW);
       delayMicroseconds(pulse_delay);
+      p_position--;
     }
   
     else if (dir == 1)
@@ -436,10 +474,11 @@ void drive_step(int dir, int axis)
       delayMicroseconds(pulse_delay);
       digitalWrite(pul_pin2, LOW);
       delayMicroseconds(pulse_delay);
-    }
+      p_position++;
+    }    
   }
 
-  else if (axis == 3)
+  else if (axis == T_AXIS)
   {
     if (dir == 0)
     {
@@ -448,6 +487,7 @@ void drive_step(int dir, int axis)
       delayMicroseconds(pulse_delay);
       digitalWrite(pul_pin3, LOW);
       delayMicroseconds(pulse_delay);
+      t_position--;
     }
   
     else if (dir == 1)
@@ -457,6 +497,7 @@ void drive_step(int dir, int axis)
       delayMicroseconds(pulse_delay);
       digitalWrite(pul_pin3, LOW);
       delayMicroseconds(pulse_delay);
+      t_position++;
     }
   }
 }
