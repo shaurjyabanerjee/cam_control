@@ -15,6 +15,7 @@
 //Button 3 - Menu Down 
 //Button 4 - Start Routine
 
+
 //LIBRARIES -----------------------------------------------------------------------
 #include <SPI.h>
 #include <Wire.h>
@@ -48,9 +49,9 @@ long int test_steps = 24000;
 const int pulse_delay = 50; //In microseconds
 
 //GLOBAL POSITIONING VARIABLES ----------------------------------------------------
-signed long x_position = 0;
-signed long p_position = 0;
-signed long t_position = 0;
+signed int x_position = 0;
+signed int p_position = 0;
+signed int t_position = 0;
 
 //LINEAR DISTANCE VARIABLES -------------------------------------------------------
 const int steps_per_inch = 1266;  //Number of steps to move one inch linearly
@@ -77,6 +78,8 @@ static InputDebounce button1;
 static InputDebounce button2;
 static InputDebounce button3;
 static InputDebounce button4;
+
+#define BUTTON_DEBOUNCE_DELAY 20
 
 byte button1_state = 0;
 byte button2_state = 0;
@@ -251,6 +254,7 @@ void setup()
    pinMode(button2_pin, INPUT);
    pinMode(button3_pin, INPUT);
    pinMode(button4_pin, INPUT);
+
    pinMode(shutter_pin, OUTPUT);
    pinMode(pul_pin1, OUTPUT);
    pinMode(dir_pin1, OUTPUT);
@@ -261,12 +265,21 @@ void setup()
 
   // debounce Library -------------------------------------------
   // register callback functions (shared, used by all buttons)
-  buttonTestA.registerCallbacks(buttonTest_pressedCallback, buttonTest_releasedCallback, buttonTest_pressedDurationCallback, buttonTest_releasedDurationCallback);
-  buttonTestB.registerCallbacks(buttonTest_pressedCallback, buttonTest_releasedCallback, buttonTest_pressedDurationCallback, buttonTest_releasedDurationCallback);
+  button1.registerCallbacks(buttonTest_pressedCallback, buttonTest_releasedCallback
+  , buttonTest_pressedDurationCallback, buttonTest_releasedDurationCallback);
+  button2.registerCallbacks(buttonTest_pressedCallback, buttonTest_releasedCallback
+  , buttonTest_pressedDurationCallback, buttonTest_releasedDurationCallback);
+  button3.registerCallbacks(buttonTest_pressedCallback, buttonTest_releasedCallback
+  , buttonTest_pressedDurationCallback, buttonTest_releasedDurationCallback);
+  button4.registerCallbacks(buttonTest_pressedCallback, buttonTest_releasedCallback
+  , buttonTest_pressedDurationCallback, buttonTest_releasedDurationCallback);
+
   
   // setup input buttons (debounced)
-  button1.setup(pinSwitchA, BUTTON_DEBOUNCE_DELAY, InputDebounce::PIM_INT_PULL_UP_RES);
-  button2.setup(pinSwitchB, BUTTON_DEBOUNCE_DELAY, InputDebounce::PIM_INT_PULL_UP_RES, 300); // single-shot pressed-on time duration callback
+  button1.setup(button1_pin, BUTTON_DEBOUNCE_DELAY, InputDebounce::PIM_EXT_PULL_DOWN_RES);
+  button2.setup(button2_pin, BUTTON_DEBOUNCE_DELAY, InputDebounce::PIM_EXT_PULL_DOWN_RES); // single-shot pressed-on time duration callback
+  button3.setup(button3_pin, BUTTON_DEBOUNCE_DELAY, InputDebounce::PIM_EXT_PULL_DOWN_RES);
+  button4.setup(button4_pin, BUTTON_DEBOUNCE_DELAY, InputDebounce::PIM_EXT_PULL_DOWN_RES);
   // ------------------------------------------------------------
 
    //Set default states of digital outs
@@ -296,24 +309,17 @@ void loop()
 //CONTROLLER FUNCTIONS ------------------------------------------------------------
 void control_poller()
 {
-#if 0
-  button1_state = digitalRead(button1_pin);
-  button2_state = digitalRead(button2_pin);
-  button3_state = digitalRead(button3_pin);
-  button4_state = digitalRead(button4_pin);
-
-  pot1_val = analogRead(pot1_pin);
-  pot2_val = analogRead(pot2_pin);
-  pot3_val = analogRead(pot3_pin);
-  pot4_val = analogRead(pot4_pin);
-#else
   // poll button state
   unsigned long now = millis();
   button1.process(now); // callbacks called in context of this function
   button2.process(now);
   button3.process(now); // callbacks called in context of this function
   button4.process(now);
-#endif
+
+  pot1_val = analogRead(pot1_pin);
+  pot2_val = analogRead(pot2_pin);
+  pot3_val = analogRead(pot3_pin);
+  pot4_val = analogRead(pot4_pin);
 }
 
 
