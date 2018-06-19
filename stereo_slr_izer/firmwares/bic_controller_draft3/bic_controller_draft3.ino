@@ -23,6 +23,9 @@
 #include <Adafruit_SSD1306.h>
 #include <InputDebounce.h>
 
+//THIS SKETCH ---------------------------------------------------------------------
+#include "buttons.h"
+
 //SCREEN STUFF --------------------------------------------------------------------
 
 #define OLED_RESET 4
@@ -408,28 +411,40 @@ void manual_jog()
   }
 
   //Button to switch axes
-  if (button1_state == HIGH)
-  {
-    
-    if (axis_state == 1) {axis_state ++;}
-    else if (axis_state == 2) {axis_state --;}
-    display.clearDisplay();
-    display.setCursor(0,0);
-    display.setTextColor(WHITE);
-    display.setTextSize(2);
-    display.println(F("MOVEMENT"));
-    display.println(F("AXIS :"));
-    if (axis_state == 1)
-    {
-      display.println(F("X AXIS"));  
+  switch (get_button_press(BUTTON_ONE)) {
+    case BUTTON_PRESS_SHORT: {
+
+      if (axis_state == 1) {axis_state ++;}
+      else if (axis_state == 2) {axis_state --;}
+      display.clearDisplay();
+      display.setCursor(0,0);
+      display.setTextColor(WHITE);
+      display.setTextSize(2);
+      display.println(F("MOVEMENT"));
+      display.println(F("AXIS :"));
+      if (axis_state == 1)
+      {
+        display.println(F("X AXIS"));
+        Serial.println(F("X AXIS"));
+      }
+      else if (axis_state == 2)
+      {
+        display.println(F("P AXIS"));
+        Serial.println(F("P AXIS"));
+        display.println(p_position);
+      }
+      delay(120);
+      display.display();
+
+      break;
     }
-    else if (axis_state == 2)
-    {
-      display.println(F("P AXIS"));  
-      display.println(p_position);
+    case BUTTON_PRESS_LONG: {
+      Serial.println("axis switch LONG PRESS");
+      break;
     }
-    delay(120);
-    display.display();
+    default: {
+      break;
+    }
   }
   
 }
