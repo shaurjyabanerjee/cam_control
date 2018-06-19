@@ -439,7 +439,7 @@ void manual_jog()
       break;
     }
     case BUTTON_PRESS_LONG: {
-      Serial.println("axis switch LONG PRESS");
+      print_keyframes();
       break;
     }
     default: {
