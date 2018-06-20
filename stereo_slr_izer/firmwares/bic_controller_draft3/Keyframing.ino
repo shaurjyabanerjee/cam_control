@@ -46,7 +46,7 @@ void visit_keyframe_blocking(int index)
   Serial.print(' ');
   Serial.print('\n');
 
-  int diff = dest->x - x_position;
+  int diff = abs(dest->x - x_position);
 
   if (dest->x < x_position) {
     Serial.print(F("backwards "));
